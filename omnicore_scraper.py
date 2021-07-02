@@ -4,7 +4,7 @@
 #
 # Usage:
 # Make sure omnicore is running, then run
-# python parse_txs.py > all_maid_txs.json
+# python omnicore_scraper.py > all_maid_txs.json
 #
 # Notes:
 # 1. Progress feedback is printed to stderr while the script runs.

@@ -31,5 +31,5 @@ export EXTERNALHDD=$HOME/hdd
 Once the blockchain is fully synced (yes you must wait) run the command
 
 ```
-python parse_txs.py > all_maidsafecoin_txs.json
+python omnicore_scraper.py > all_maidsafecoin_txs.json
 ```
