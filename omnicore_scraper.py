@@ -90,26 +90,41 @@ def fetchAddrTxs(addr):
             tx = json.loads(txStr)
             propertyid = 0
             isMaid = False
-            if "purchasedpropertyid" in tx:
-                if tx["purchasedpropertyid"] == MAID_OMNI_ID:
-                    isMaid = True
-            if "propertyid" in tx:
-                if tx["propertyid"] == MAID_OMNI_ID:
-                    isMaid = True
-            if "propertyiddesired" in tx:
-                if tx["propertyiddesired"] == MAID_OMNI_ID:
-                    isMaid = True
-            if "propertyidforsale" in tx:
-                if tx["propertyidforsale"] == MAID_OMNI_ID:
-                    isMaid = True
-            if "purchases" in tx:
-                for purchase in tx["purchases"]:
-                    if purchase["propertyid"] == MAID_OMNI_ID:
+            if tx["type"] == "Crowdsale Purchase":
+                if "purchasedpropertyid" in tx:
+                    if tx["purchasedpropertyid"] == MAID_OMNI_ID:
                         isMaid = True
-            if "subsends" in tx:
-                for subsend in tx["subsends"]:
-                    if subsend["propertyid"] == MAID_OMNI_ID:
+            elif tx["type"] in [
+                    "Create Property - Variable",
+                    "Simple Send",
+                    "Grant Property Tokens",
+                    "DEx Accept Offer",
+                    "DEx Sell Offer",
+                ]:
+                if "propertyid" in tx:
+                    if tx["propertyid"] == MAID_OMNI_ID:
                         isMaid = True
+            elif tx["type"] in ["MetaDEx trade", "MetaDEx cancel-price"]:
+                if "propertyiddesired" in tx:
+                    if tx["propertyiddesired"] == MAID_OMNI_ID:
+                        isMaid = True
+                if "propertyidforsale" in tx:
+                    if tx["propertyidforsale"] == MAID_OMNI_ID:
+                        isMaid = True
+            elif tx["type"] == "Send All":
+                if "subsends" in tx:
+                    for subsend in tx["subsends"]:
+                        if subsend["propertyid"] == MAID_OMNI_ID:
+                            isMaid = True
+            elif tx["type"] == "DEx Purchase":
+                if "purchases" in tx:
+                    for purchase in tx["purchases"]:
+                        if purchase["propertyid"] == MAID_OMNI_ID:
+                            isMaid = True
+            else:
+                # Add output to json so it won't parse correctly.
+                # This error message would get lost in the stderr output.
+                print("Unknown tx type: %s %s" % (tx["type"], tx["txid"]))
             if not isMaid:
                 continue
             del tx["confirmations"]
