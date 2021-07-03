@@ -15,10 +15,6 @@ totalcp = 0
 for tx in txs:
     if not tx["valid"]:
         continue
-    if "sendingaddress" in tx and tx["sendingaddress"] == "15jiVUZLqg9ExtyDdfHsjA1J5efujTBqJL":
-        print(json.dumps(tx, indent="  "))
-    if "referenceaddress" in tx and tx["referenceaddress"] == "15jiVUZLqg9ExtyDdfHsjA1J5efujTBqJL":
-        print(json.dumps(tx, indent="  "))
     if tx["type"] == "Simple Send":
         src = tx["sendingaddress"]
         if src not in balances:
