@@ -28,6 +28,14 @@ export EXTERNALHDD=$HOME/hdd
 
 ### Extract the transactions
 
+Edit config.json to suit your needs.
+
+`txjson` value is the absolute path to the directory to store each
+transaction data file.
+
+`omnicorecli` value is the absolute path to the omnicore-cli
+binary
+
 Once the blockchain is fully synced (yes you must wait) run the command
 
 ```

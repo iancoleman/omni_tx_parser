@@ -29,11 +29,20 @@ allAddrs.add(firstAddr)
 remainingAddrs = allAddrs.difference(fetchedAddrs)
 txids = []
 
+# load config for parameters specific to this machine
+f = open("config.json")
+configStr = f.read()
+f.close()
+config = json.loads(configStr)
+
 # Individual transactions are stored in this directory to
 # avoid having to extract them on successive runs. It's relavitely
 # slow to extract from the blockchain but fast to read from file.
 # As of 2021-07-01 the total size of this directory ended up at 6.6 GB.
-txDir = "txjson"
+txDir = config["txjson"]
+
+# The location of omnicore-cli binary
+omnicoreCli = config["omnicorecli"]
 
 # Variable to store the output
 txs = []
@@ -52,7 +61,7 @@ def fetchAddrTxs(addr):
     # get all txs for this addr
     # omnicore-cli getaddresstxids '{"addresses": ["2NDaa1MvFcpc2CAbFvG5g9dDxzrRyDnKnsj"]}'
     addrJson = json.dumps({"addresses": [addr]})
-    addrTxsStr = runCmd(["./omnicore-cli", "getaddresstxids", addrJson])
+    addrTxsStr = runCmd([omnicoreCli, "getaddresstxids", addrJson])
     addrTxs = json.loads(addrTxsStr)
     for i, txid in enumerate(addrTxs):
         if i % 100 == 0:
@@ -70,7 +79,7 @@ def fetchAddrTxs(addr):
                 f.close()
             except FileNotFoundError:
                 # if not in file, read from blockchain and store in file
-                txStr = runCmd(["./omnicore-cli", "omni_gettransaction", txid])
+                txStr = runCmd([omnicoreCli, "omni_gettransaction", txid])
                 f = open(txFullFilename, 'w')
                 f.write(txStr)
                 f.close()
