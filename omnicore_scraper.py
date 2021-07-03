@@ -4,7 +4,7 @@
 #
 # Usage:
 # Make sure omnicore is running, then run
-# python omnicore_scraper.py > all_maid_txs.json
+# python omnicore_scraper.py > all_maidsafecoin_txs.json
 #
 # Notes:
 # 1. Progress feedback is printed to stderr while the script runs.
@@ -87,6 +87,20 @@ def fetchAddrTxs(addr):
             if "propertyid" in tx:
                 if tx["propertyid"] == MAID_OMNI_ID:
                     isMaid = True
+            if "propertyiddesired" in tx:
+                if tx["propertyiddesired"] == MAID_OMNI_ID:
+                    isMaid = True
+            if "propertyidforsale" in tx:
+                if tx["propertyidforsale"] == MAID_OMNI_ID:
+                    isMaid = True
+            if "purchases" in tx:
+                for purchase in tx["purchases"]:
+                    if purchase["propertyid"] == MAID_OMNI_ID:
+                        isMaid = True
+            if "subsends" in tx:
+                for subsend in tx["subsends"]:
+                    if subsend["propertyid"] == MAID_OMNI_ID:
+                        isMaid = True
             if not isMaid:
                 continue
             del tx["confirmations"]
