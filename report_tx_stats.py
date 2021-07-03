@@ -15,69 +15,77 @@ totalcp = 0
 for tx in txs:
     if not tx["valid"]:
         continue
+    addrSrc = ""
+    addrDst = ""
+    amountSrc = "0"
+    amountDst = "0"
     if tx["type"] == "Simple Send":
-        src = tx["sendingaddress"]
-        if src not in balances:
-            balances[src] = 0
-        dst = tx["referenceaddress"]
-        if dst not in balances:
-            balances[dst] = 0
-        amount = float(tx["amount"])
-        balances[src] = balances[src] - amount
-        balances[dst] = balances[dst] + amount
-    elif tx["type"] == "Crowdsale Purchase":
-        src = tx["sendingaddress"]
-        if src not in balances:
-            balances[src] = 0
-        amount = float(tx["purchasedtokens"])
-        balances[src] = balances[src] + amount
-        totalcp = totalcp + amount
+        # eg d06af7214cfed65bbd7bd0881c7152fd5e32fbdabcfa4ab2cfd4115deaa66971
+        addrSrc = tx["sendingaddress"]
+        addrDst = tx["referenceaddress"]
+        amountSrc = tx["amount"]
+        amountDst = tx["amount"]
     elif tx["type"] == "Send All":
-        src = tx["sendingaddress"]
-        if src not in balances:
-            balances[src] = 0
-        dst = tx["referenceaddress"]
-        if dst not in balances:
-            balances[dst] = 0
+        # eg b6380b4a95c836bcf3899311dffc2814a7c2b40055336ea080f47a92f4cc5bc0
+        addrSrc = tx["sendingaddress"]
+        addrDst = tx["referenceaddress"]
         for subsend in tx["subsends"]:
             if subsend["propertyid"] == MAID:
-                amount = float(subsend["amount"])
-                balances[src] = balances[src] - amount
-                balances[dst] = balances[dst] + amount
+                amountSrc = subsend["amount"]
+                amountDst = subsend["amount"]
+    elif tx["type"] == "Crowdsale Purchase":
+        # eg d55b05195d1e52ef09da12f251aa23b46807af80ffe85fe0c28e052761612705
+        # addrs seems backwards but it's correct
+        addrSrc = tx["referenceaddress"]
+        addrDst = tx["sendingaddress"]
+        amountSrc = tx["purchasedtokens"]
+        amountDst = tx["purchasedtokens"]
+        totalcp = totalcp + float(amountDst)
     elif tx["type"] == "MetaDEx trade":
+        # eg ada786071ea9f4c0c0f9a8ab7bde7e20160ec46ac7ae74c5c2f1127318e121b1
         if tx["propertyiddesired"] == MAID:
-            dst = tx["sendingaddress"]
-            if dst not in balances:
-                balances[dst] = 0
-            amount = float(tx["amountdesired"])
-            balances[dst] = balances[dst] + amount # Is this right?
+            addrDst = tx["sendingaddress"]
+            amountDst = tx["amountdesired"] # Is this right?
         if tx["propertyidforsale"] == MAID:
-            src = tx["sendingaddress"]
-            if src not in balances:
-                balances[src] = 0
-            amount = float(tx["amountforsale"])
-            balances[src] = balances[src] - amount # Is this right?
+            addrSrc = tx["sendingaddress"]
+            amountSrc = tx["amountforsale"] # Is this right?
     elif tx["type"] == "MetaDEx cancel-price":
+        # eg 3277318d3a18e28fdead0b0b3cd065849000073446472a79f0099fe4f24b864a
         if tx["propertyiddesired"] == MAID:
-            dst = tx["sendingaddress"]
-            if dst not in balances:
-                balances[dst] = 0
-            amount = float(tx["amountdesired"])
-            balances[dst] = balances[dst] - amount # Is this right?
+            addrDst = tx["sendingaddress"]
+            amountDst = "-" + tx["amountdesired"] # Is this right?
         if tx["propertyidforsale"] == MAID:
-            src = tx["sendingaddress"]
-            if src not in balances:
-                balances[src] = 0
-            amount = float(tx["amountforsale"])
-            balances[src] = balances[src] + amount # Is this right?
+            addrSrc = tx["sendingaddress"]
+            amountSrc = "-" + tx["amountforsale"] # Is this right?
     elif tx["type"] == "Create Property - Variable":
+        # eg 86f214055a7f4f5057922fd1647e00ef31ab0a3ff15217f8b90e295f051873a7
         continue
     elif tx["type"] == "Close Crowdsale":
         continue
     else:
         print("Unknown tx type %s %s" % (tx["type"], tx["txid"]))
+        continue
+    # do some checks
+    if amountSrc.find(".") > -1:
+        print("Decimal maidsafecoin amount: %s %s" % (amountSrc, tx["txid"]))
+    if amountDst.find(".") > -1:
+        print("Decimal maidsafecoin amount: %s %s" % (amountDst, tx["txid"]))
+    # do the accounting
+    if addrSrc != "":
+        if addrSrc not in balances:
+            balances[addrSrc] = 0
+        balances[addrSrc] = balances[addrSrc] - float(amountSrc)
+    if addrDst != "":
+        if addrDst not in balances:
+            balances[addrDst] = 0
+        balances[addrDst] = balances[addrDst] + float(amountDst)
 
 print("Total maidsafecoin in crowdsale purchase: %s" % totalcp)
+
+totalFromUtxos = 0
+for addr in balances:
+    totalFromUtxos = totalFromUtxos + balances[addr]
+print("Total maidsafecoin from current balances: %s" % totalFromUtxos)
 
 ltz = 0
 ltzAddrs = []
