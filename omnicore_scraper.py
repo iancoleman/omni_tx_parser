@@ -160,6 +160,6 @@ while len(remainingAddrs) > 0:
     stderr("allAddrs: %s fetchedAddrs: %s remainingAddrs: %s" % (len(allAddrs), len(fetchedAddrs), len(remainingAddrs)))
 
 # sort txs by time, then by txid
-txs = sorted(txs, key=lambda t: (t["blocktime"], int(t["txid"][:8],16)))
+txs = sorted(txs, key=lambda t: (t["block"], int(t["txid"][:8],16)))
 # print out the list of txs
 print(json.dumps(txs, indent=2))
