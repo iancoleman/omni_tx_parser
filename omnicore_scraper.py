@@ -1,16 +1,18 @@
 # Gets all the maidsafecoin transactions from omnicore
 # and saves them into a list
-# which is printed to stdout.
+# in the file
+# all_maidsafecoin_txs_omnicore.json
+# and saves all the balances for these addresses in
+# all_maidsafecoin_balances_omnicore.json
 #
 # Usage:
 # Make sure omnicore is running, then run
-# python omnicore_scraper.py > all_maidsafecoin_txs.json
+# python omnicore_scraper.py
 #
 # Notes:
-# 1. Progress feedback is printed to stderr while the script runs.
-# 2. Individual transaction json is saved to the directory 'txjson'
-#    since it's slow to extract data from the blockchain, so the
-#    data is saved locally to speed successive runs up.
+# - Individual transaction json is saved to the directory 'txjson'
+#   since it's slow to extract data from the blockchain, so the
+#   data is saved locally to speed successive runs up.
 
 import collections
 import json
@@ -47,16 +49,13 @@ omnicoreCli = config["omnicorecli"]
 # Variable to store the output
 txs = []
 
-def stderr(msg):
-    print(msg, file=sys.stderr)
-
 def runCmd(cmd_arr):
     proc = subprocess.Popen(cmd_arr, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     (stdout, ignore) = proc.communicate()
     return stdout.decode("utf-8")
 
 def fetchAddrTxs(addr):
-    stderr("Fetching %s" % addr)
+    print("Fetching %s" % addr)
     addrShort = addr[:8] + "..."
     # get all txs for this addr
     # omnicore-cli getaddresstxids '{"addresses": ["2NDaa1MvFcpc2CAbFvG5g9dDxzrRyDnKnsj"]}'
@@ -65,7 +64,7 @@ def fetchAddrTxs(addr):
     addrTxs = json.loads(addrTxsStr)
     for i, txid in enumerate(addrTxs):
         if i % 100 == 0:
-            stderr("Fetching %s tx %s of %s" % (addrShort, (i+1), len(addrTxs)))
+            print("Fetching %s tx %s of %s" % (addrShort, (i+1), len(addrTxs)))
         # save every tx
         # omnicore-cli "omni_gettransaction" "1075db55d416d3ca199f55b6084e2115b9345e16c5cf302fc80e9d5fbf5d48d"
         if txid not in txids:
@@ -84,7 +83,7 @@ def fetchAddrTxs(addr):
                 f.write(txStr)
                 f.close()
             if txStr[0] != "{":
-                #stderr("Unknown format for tx %s\n%s" % (txid, txStr))
+                #print("Unknown format for tx %s\n%s" % (txid, txStr))
                 continue
             # use this tx data to find related txs
             tx = json.loads(txStr)
@@ -132,8 +131,6 @@ def fetchAddrTxs(addr):
             elif tx["type"] == "MetaDEx cancel-ecosystem": # eg e23247a07beb8e6725719af1b5a44589aa87a0ac2bd120d3652e0df9cca3f26f
                 pass
             else:
-                # Add output to json so it won't parse correctly.
-                # This error message would get lost in the stderr output.
                 print("Unknown tx type: %s %s" % (tx["type"], tx["txid"]))
             if not isMaid:
                 continue
@@ -154,12 +151,75 @@ def fetchAddrTxs(addr):
                         allAddrs.add(toAddr)
     fetchedAddrs.add(addr)
 
+def fetchBalance(addr):
+    addrBalanceStr = runCmd([omnicoreCli, "omni_getbalance", addr, str(MAID_OMNI_ID)])
+    if len(addrBalanceStr) == 0 or addrBalanceStr[0] != "{":
+        print("Unknown addr balance format: %s %s" % (addr, addrBalanceStr))
+        return {}
+    # parse balance json
+    try:
+        addrBalance = json.loads(addrBalanceStr)
+    except:
+        print("Unknown addr balance json: %s %s" % (addr, addrBalanceStr))
+        return {}
+    return addrBalance
+
+def fetchCurrentBlockHeight():
+    infoStr = runCmd([omnicoreCli, "omni_getinfo"])
+    if len(infoStr) == 0 or infoStr[0] != "{":
+        print("Unknown omni_getinfo format: %s" % infoStr)
+        return -1
+    info = json.loads(infoStr)
+    if "block" not in info:
+        print("No block info in omni_getinfo: %s" % infoStr)
+        return -1
+    return info["block"]
+
 while len(remainingAddrs) > 0:
     fetchAddrTxs(remainingAddrs.pop())
     remainingAddrs = allAddrs.difference(fetchedAddrs)
-    stderr("allAddrs: %s fetchedAddrs: %s remainingAddrs: %s" % (len(allAddrs), len(fetchedAddrs), len(remainingAddrs)))
+    print("allAddrs: %s fetchedAddrs: %s remainingAddrs: %s" % (len(allAddrs), len(fetchedAddrs), len(remainingAddrs)))
 
-# sort txs by time, then by txid
+# sort txs by block then by position in block,
+# which is necessary for dex trades to be processed correctly, see
+# https://github.com/OmniLayer/spec/blob/fc37541641ad45959cdbb71a6985fcd99dae445c/OmniSpecification.adoc#723-sell-omni-protocol-coins-for-another-omni-protocol-currency
 txs = sorted(txs, key=lambda t: (t["block"], t["positioninblock"]))
-# print out the list of txs
-print(json.dumps(txs, indent=2))
+
+# get address balances
+balances = {}
+print("Getting current balances for all maidsafecoin addresses")
+startBlockHeight = fetchCurrentBlockHeight()
+print("Currently at block height %s" % startBlockHeight)
+for tx in txs:
+    if "sendingaddress" in tx:
+        fromAddr = tx["sendingaddress"]
+        if fromAddr not in balances:
+            balance = fetchBalance(fromAddr)
+            balances[fromAddr] = balance
+    if "referenceaddress" in tx:
+        toAddr = tx["referenceaddress"]
+        if toAddr not in balances:
+            balance = fetchBalance(toAddr)
+            balances[toAddr] = balance
+print("Checking if any new data has arrived since we started getting balances")
+endBlockHeight = fetchCurrentBlockHeight()
+print("Currently at block height %s" % endBlockHeight)
+# if new data has arrived since the start then alert that the results might be incorrect
+if endBlockHeight != startBlockHeight:
+    print("ERROR: New block(s) arrived during processing of balances, results will be incorrect if there are maidsafecoin txs after block %s" % startBlockHeight)
+
+# write the list of txs to file
+txFilename = "all_maidsafecoin_txs_omnicore.json"
+txContent = json.dumps(txs, indent=2)
+f = open(txFilename, 'w')
+f.write(txContent)
+f.close()
+print("Wrote file %s" % txFilename)
+
+# write the list of balances to file
+balancesFilename = "all_maidsafecoin_balances_omnicore.json"
+balancesContent = json.dumps(balances, indent=2)
+f = open(balancesFilename, 'w')
+f.write(balancesContent)
+f.close()
+print("Wrote file %s" % balancesFilename)
