@@ -87,13 +87,17 @@ class Dex:
             # https://github.com/OmniLayer/spec/blob/fc37541641ad45959cdbb71a6985fcd99dae445c/OmniSpecification.adoc#723-sell-omni-protocol-coins-for-another-omni-protocol-currency
             # Liquidity bonus maybe?
             bm = self.orders[bestMatchIndex]
+            # calculate liquidity bonus
+            bmRate = bm["saleAmount"] / bm["desiredAmount"]
+            purchaseAmount = bmRate * order["desiredAmount"]
+            liquidityBonus = math.floor(purchaseAmount * 0.003) # TODO how to use this?
+            # calculate amounts to transfer
             bmMatchedSale = 0
             bmMatchedDesired = 0
             bmSaleRemaining = bm["saleAmount"] - bm["saleMatched"]
             bmDesiredRemaining = bm["desiredAmount"] - bm["desiredMatched"]
             orderDesiredRemaining = order["desiredAmount"] - order["desiredMatched"]
             orderSaleRemaining = order["saleAmount"] - order["saleMatched"]
-            liquidityBonus = round(bmDesiredRemaining * 0.003) # TODO how to use this?
             if bmSaleRemaining <= orderDesiredRemaining:
                 # earlier order sale amount is completely consumed
                 bmMatchedSale = bmSaleRemaining
@@ -216,7 +220,7 @@ txs = sorted(txs, key=lambda t: (t["block"], t["positioninblock"]))
 dex = Dex()
 
 balances = {
-    "1ARjWDkZ7kT9fwjPrjcQyvbXDkEySzKHwu": 452520155,
+    "1ARjWDkZ7kT9fwjPrjcQyvbXDkEySzKHwu": 452552412,
 }
 
 totalCrowdsalePurchases = 0
@@ -303,11 +307,11 @@ for tx in txs:
         balances[addrDst] = balances[addrDst] + amountDstFlt
     # check for negative balances
     if addrSrc in balances and balances[addrSrc] < 0:
-        print("Addr just went to invalid negative balance %s: %s with tx %s" % (balances[addrSrc], addrSrc, tx["txid"]))
+        print("addrSrc just went to invalid negative balance %s: %s with tx %s" % (balances[addrSrc], addrSrc, tx["txid"]))
         if exitOnAuditFailure:
             sys.exit(0)
     if addrDst in balances and balances[addrDst] < 0:
-        print("Addr just went to invalid negative balance %s: %s with tx %s" % (balances[addrDst], addrDst, tx["txid"]))
+        print("addrDst just went to invalid negative balance %s: %s with tx %s" % (balances[addrDst], addrDst, tx["txid"]))
         if exitOnAuditFailure:
             sys.exit(0)
 
