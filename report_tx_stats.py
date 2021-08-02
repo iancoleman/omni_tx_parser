@@ -1,5 +1,5 @@
 # Converts a list of transactions
-# in file all_maidsafecoin_txs.json
+# in file all_maidsafecoin_txs_omnicore.json
 # into a list of address balances
 # and reports stats on the balances.
 #
@@ -210,7 +210,7 @@ if exitOnAuditFailure:
 
 MAID = 3
 
-f = open("all_maidsafecoin_txs.json")
+f = open("all_maidsafecoin_txs_omnicore.json")
 content = f.read()
 f.close()
 

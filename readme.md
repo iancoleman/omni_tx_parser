@@ -17,13 +17,12 @@ export EXTERNALHDD=$HOME/hdd
 ./omnicored -blocksdir=${EXTERNALHDD}/blocks -datadir=${EXTERNALHDD}/data -debuglogfile=${EXTERNALHDD}/debuglog -walletdir=${EXTERNALHDD}/wallet -rpcuser=mysecureusername -rpcpassword=mysecurepassword -txindex=1 -rpcallowip=127.0.0.1 -dbcache=20480 -disablewallet -server -experimental-btc-balances -reindex -reindex-chainstate
 ```
 
-Any future time (when you already have the blockchain) use this:
-This is the same as above but maybe there are some reindex flags we can leave
-off? If you know which flags can be omitted please submit a PR fixing it.
+Any future time (when you already have the blockchain) use this: (note the
+lack of -reindex and -reindex-chainstate flags)
 
 ```
 export EXTERNALHDD=$HOME/hdd
-./omnicored -blocksdir=${EXTERNALHDD}/blocks -datadir=${EXTERNALHDD}/data -debuglogfile=${EXTERNALHDD}/debuglog -walletdir=${EXTERNALHDD}/wallet -rpcuser=mysecureusername -rpcpassword=mysecurepassword -txindex=1 -rpcallowip=127.0.0.1 -dbcache=20480 -disablewallet -server -experimental-btc-balances -reindex -reindex-chainstate
+./omnicored -blocksdir=${EXTERNALHDD}/blocks -datadir=${EXTERNALHDD}/data -debuglogfile=${EXTERNALHDD}/debuglog -walletdir=${EXTERNALHDD}/wallet -rpcuser=mysecureusername -rpcpassword=mysecurepassword -txindex=1 -rpcallowip=127.0.0.1 -dbcache=20480 -disablewallet -server -experimental-btc-balances
 ```
 
 ### Extract the transactions
